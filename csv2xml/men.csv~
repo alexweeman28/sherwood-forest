@@ -1,3 +1,0 @@
-ipaddress,port,active
-10.0.1.195, 9000, True
-10.0.1.218, 8001, False
