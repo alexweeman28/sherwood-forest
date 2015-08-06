@@ -29,12 +29,14 @@
   <h2>The Men of Sherwood Forest</h2>
     <table class="men">
       <tr>
+	<th>ID</th>
         <th>IP Address</th>
         <th>Port</th>
         <th>Active</th>	
       </tr>
       <xsl:for-each select="men/bot">
       <tr>
+	<td><xsl:value-of select="@id" /></td>
         <td><xsl:value-of select="ipaddress"/></td>
         <td><xsl:value-of select="port"/></td>
         <td><xsl:value-of select="active"/></td> 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-# encoding: utf-8
 """
-csv_to_xml.py
+csv2xml.py
 
 This script coverts a csv file to an XML.
 The script takes 2 paramenters
@@ -42,40 +41,39 @@ import csv
 from xml.dom.minidom import Document
 
 def main(args):
-  usage = "Usage: \n\t args[0] csv nodename\n\t csv: the name of a csv file (default: men.csv) WITH a header row, and\n\t nodename: tag for nodes" 
+  # Input file should be called men.csv
+  filename = 'men.csv'
+  # The XML nodes will be named <bot>
+  single_item = 'bot'
+  safe_filename = filename[:-4]
+  
   try:
-    filename = args[1]
-    safe_filename = str.replace(filename[:-4], " ", "_").lower()
-  except IndexError:
-    try:
-      filename = 'men.csv'
-      safe_filename = 'men'
-    except:
-      print(usage)
-      sys.exit()
+    f = csv.reader(open(filename, 'r'))
+  except IOError:
+    print('ERROR: Input file men.csv not found in current working directory')
+    sys.exit()
     
-  try:
-    single_item = args[2]
-  except IndexError:
-    single_item = 'bot'
-    #print(usage)
-    #sys.exit()
-  
-  f = csv.reader(open(filename, 'r'))
-  
   doc = Document()
+  # Use the file name as the root node name
   root_element = doc.createElement(safe_filename)
   doc.appendChild(root_element)
-
+  # Add the style sheet info
   pi = doc.createProcessingInstruction('xml-stylesheet',
                                        'type="text/xsl"'
                                        'href="men.xsl"')
   doc.insertBefore(pi, doc.firstChild)
-  
+
+  # Get the header row from the csv file
+  # If it's missing or short, use a default
   columns = next(f)
-  
+  if len(columns) < 3:
+    columns = ['ipaddress', 'port', 'active']
+
+  index = 0
   for row in f:
+    index += 1
     item = doc.createElement(single_item)
+    item.setAttribute('id', str(index))
     root_element.appendChild(item)
     for c in enumerate(create_col_nodes(columns, item, doc)):
       # jpo: Strip white space from node entries
