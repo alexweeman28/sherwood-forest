@@ -1,8 +1,31 @@
 import xml.etree.ElementTree as etree
 import sqlite3 as sql
-import re, socket, subprocess, sys
+import os, re, socket, subprocess, sys, time
 import urllib.request
+import multiprocessing as mp
+from time import strftime
+from xmlrpc.server import SimpleXMLRPCServer
+from xmlrpc.server import SimpleXMLRPCRequestHandler
 
+class RequestHandler(SimpleXMLRPCRequestHandler):
+    '''A (very) simple XMLRPC server that merely accepts
+    file uploads from client instances.
+    '''
+    def __init__(self, ip, port):
+        self.server = SimpleXMLRPCServer((ip, port))
+        self.server.register_introspection_functions()
+        self.server.register_function(self.server_receive_file, 'server_receive_file')
+        self.server.register_function(pow)
+        try:
+            self.server.serve_forever()
+        except KeyboardInterrupt:
+            print('Bye from the XMLRPC server!')
+            sys.exit(0)
+            
+    def server_receive_file(self, filename, contents):
+        with open(filename, "wb") as handle:
+            handle.write(contents.data)
+            return True                                                                                                                                            
 
 def get_my_IP():
     p=subprocess.Popen('ifconfig',stdout=subprocess.PIPE,stderr=None,shell=True)
@@ -70,9 +93,9 @@ if __name__=='__main__':
     # Set global timeout for 
     socket.setdefaulttimeout(3)
     # Get my ip address
-    myIP = get_my_IP()
+    my_ip = get_my_IP()
     #myIP = '10.0.1.243'
-    print('My IP is:', myIP)
+    print('My IP is:', my_ip)
     # Connect to/create local database
     db = 'men.db'
     conn = sql.connect(db)
@@ -84,16 +107,27 @@ if __name__=='__main__':
         create_men_db(conn)
         store_bot_info(tree, conn)
     else:
-        print('Can\'t reach the server. Us an old copy, if it exists!')
+        print('Can\'t reach the server. Using an old copy, if it exists!')
     # What's my assigned server port number and seq_no?
-    my_info = get_my_info(conn, myIP)
+    my_info = get_my_info(conn, my_ip)
     if my_info==None:
         print('No botnet info available for my node! Exiting...')
         sys.exit(1)
     my_port, my_seq_no = my_info
     # At this point, we have all the info 
     # needed to fire up an XMLRPC server
-    print('My port number is', my_port)
+    print('My port number is', my_port, 'and my sequence number is', my_seq_no)
+
+    # We'll only start a server if my_seq_no != 0
+    # In that case, we only need to start up an XMLRPC client
+    if my_seq_no > 0:
+        try:
+            print(strftime('%H:%M:%S') + ' Spawning child process for XMLRPC server' + '...', end = '')
+            agent = mp.Process(target=RequestHandler, args=(my_ip, int(my_port),))
+            agent.start()
+            print('success!')
+        except Exception as e:
+            print('ERROR: Can\'t start XMLRPC server instance:', e)
 
     # Now, who is our next hop? We need this
     # to define which server to connect our
@@ -110,3 +144,10 @@ if __name__=='__main__':
         print('Fire up a client!')
     else:
         print('We\'re done here!')
+
+    while True:
+        try:
+            time.sleep(30)
+        except KeyboardInterrupt:
+            print('Main program says bye!')
+            sys.exit(0)
