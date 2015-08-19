@@ -62,13 +62,17 @@ def main(args):
                                        'type="text/xsl"'
                                        'href="men.xsl"')
   doc.insertBefore(pi, doc.firstChild)
-
   # Get the header row from the csv file
   # If it's missing or short, use a default
   columns = next(f)
-  if len(columns) < 3:
-    columns = ['ipaddress', 'port', 'active']
+  if len(columns) < 4:
+    columns = ['ipaddress','port','seq_no','active']
 
+  # Remove white space from around column names
+  for i in range(len(columns)):
+    columns[i] = columns[i].strip()
+
+  # Populate the XML document
   index = 0
   for row in f:
     index += 1

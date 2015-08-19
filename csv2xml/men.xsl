@@ -32,6 +32,7 @@
 	<th>ID</th>
         <th>IP Address</th>
         <th>Port</th>
+        <th>Seq No</th>
         <th>Active</th>	
       </tr>
       <xsl:for-each select="men/bot">
@@ -39,6 +40,7 @@
 	<td><xsl:value-of select="@id" /></td>
         <td><xsl:value-of select="ipaddress"/></td>
         <td><xsl:value-of select="port"/></td>
+        <td style="text-align: right;"><xsl:value-of select="seq_no"/></td>
         <td><xsl:value-of select="active"/></td> 
      </tr>
       </xsl:for-each>
