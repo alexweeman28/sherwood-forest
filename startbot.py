@@ -23,7 +23,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
     '''A (very) simple XMLRPC server that merely accepts
     file uploads from client instances.
     '''
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, lock):
         self.server = SimpleXMLRPCServer((ip, port))
         # This method gives us a way to check
         # connectivity for clients
@@ -42,9 +42,11 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
             sys.exit(0)
             
     def server_receive_file(self, filename, contents):
+        self.lock.acquire()
         with open(data_dir + '/' + filename, "wb") as handle:
             handle.write(contents.data)
-            return True                                                                                                                                            
+        self.lock.release()
+        return True                                                                                                                                            
 
 def get_my_IP():
     p=subprocess.Popen('ifconfig',stdout=subprocess.PIPE,stderr=None,shell=True)
@@ -143,9 +145,10 @@ if __name__=='__main__':
     # We'll only start a server if my_seq_no > 0
     server = None
     if my_seq_no > 0:
+        lock = mp.Lock()
         try:
             print(strftime('%H:%M:%S') + ' Spawning child process for XMLRPC server' + '...', end = '')
-            server = mp.Process(target=RequestHandler, args=(my_ip, int(my_port),))
+            server = mp.Process(target=RequestHandler, args=(my_ip, int(my_port), lock))
             server.start()
             time.sleep(1)
             if server.is_alive():
@@ -216,9 +219,23 @@ if __name__=='__main__':
 
     while True:
         try:
+            files = os.listdir(data_dir)
+            print('Files in the data directory:', files)
+            lock.acquire()
+            for file in files:
+                if os.path.isfile(file):
+                    with open('./bots2.xml', "rb") as handle:
+                        binary_data = xmlrpc.client.Binary(handle.read())
+                    proxy.server_receive_file(binary_data)
+            for file in files:
+                os.remove(data_dir + '/' + file)
+            lock.release()
+            # Whew! Let's get some rest...
             time.sleep(30)
+            # Let's check on the server
             if not server.is_alive():
                 print('ERROR: My server seems to have left the building. Exiting...')
+            
         except KeyboardInterrupt:
             print('Main program says bye!')
             break
