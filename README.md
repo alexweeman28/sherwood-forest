@@ -8,8 +8,4 @@ This repository contains Python scripts and other files to support data exfiltra
 
 TO DO: 
 
-* Add synchronization between server process and client so that the client doesn't try to send files that haven't completely downloaded yet.
-
-* The client should regularly check for new files in the the data_dir. Whenever new files are found, the client should:
- * Send the file on to the downstream server
- * Remove the file from the data_dir
+* On server start, need to check that a server instance isn't already running...
