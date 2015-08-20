@@ -5,3 +5,11 @@ This repository contains Python scripts and other files to support data exfiltra
 * **startbot.py** -- Queries the men.xml file on the specified (so far hard coded) Web server and sets up XMLRPC clients and/or servers, depending on the local host's sequence number in the bot chain.
 
 * **csv2xml** -- This directory contains files that support the creation of human- and machine-readable XML files containing information on the software bots.
+
+TO DO: 
+
+* Add synchronization between server process and client so that the client doesn't try to send files that haven't completely downloaded yet.
+
+* The client should regularly check for new files in the the data_dir. Whenever new files are found, the client should:
+ * Send the file on to the downstream server
+ * Remove the file from the data_dir
