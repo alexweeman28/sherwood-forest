@@ -24,7 +24,11 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
     file uploads from client instances.
     '''
     def __init__(self, ip, port, lock):
-        self.server = SimpleXMLRPCServer((ip, port))
+        try:
+            self.server = SimpleXMLRPCServer((ip, port))
+        except Exception as e:
+            print('The XMLRPC server won\'t start:', e)
+            sys.exit(1)
         # This method gives us a way to check
         # connectivity for clients
         self.lock = lock
