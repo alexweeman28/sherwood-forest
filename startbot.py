@@ -202,7 +202,7 @@ if __name__=='__main__':
                 else:
                     print('ERROR: Not able to connect downstream server:', e)
                     print('Exiting...')
-v                    sys.exit(1)
+                    sys.exit(1)
                 continue
             break
         if proxy == None:
