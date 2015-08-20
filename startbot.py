@@ -37,6 +37,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
                 print('ERROR: XMLRPC server unable to create data directory:', e)
                 sys.exit(1)
         try:
+            print('Server lock is', self.lock)
             self.server.serve_forever()
         except KeyboardInterrupt:
             print('Bye from the XMLRPC server!')
@@ -147,6 +148,7 @@ if __name__=='__main__':
     server = None
     if my_seq_no > 0:
         lock = mp.Lock()
+        print('Client lock is', lock)
         try:
             print(strftime('%H:%M:%S') + ' Spawning child process for XMLRPC server' + '...', end = '')
             server = mp.Process(target=RequestHandler, args=(my_ip, int(my_port), lock))
@@ -218,6 +220,7 @@ if __name__=='__main__':
     else:
         print('No downstream server exists, so skipping XMLRPC client creation.')
 
+    # Here's our 'infinite' loop
     while True:
         try:
             files = os.listdir(data_dir)
@@ -240,4 +243,7 @@ if __name__=='__main__':
             
         except KeyboardInterrupt:
             print('Main program says bye!')
+            break
+        except Exception as e:
+            print('Something bad happened:', e)
             break
