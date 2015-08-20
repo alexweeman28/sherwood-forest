@@ -7,6 +7,15 @@ from time import strftime
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.server import SimpleXMLRPCRequestHandler
 
+### Set global configuration parms ###
+# How long to wait for XML server to respond?
+socket.setdefaulttimeout(3)
+# Where is men.xml data stored locally?
+db = 'men.db'
+# Where are incoming/outgoing files stored?
+data_dir = 'data'
+
+
 class RequestHandler(SimpleXMLRPCRequestHandler):
     '''A (very) simple XMLRPC server that merely accepts
     file uploads from client instances.
@@ -15,7 +24,12 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
         self.server = SimpleXMLRPCServer((ip, port))
         self.server.register_introspection_functions()
         self.server.register_function(self.server_receive_file, 'server_receive_file')
-        self.server.register_function(pow)
+        if not os.path.exists(data_dir):
+            try:
+                os.makedirs(data_dir)
+            except OSError as e:
+                print('ERROR: XMLRPC server unable to create data directory:', e)
+                sys.exit(1)
         try:
             self.server.serve_forever()
         except KeyboardInterrupt:
@@ -23,7 +37,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
             sys.exit(0)
             
     def server_receive_file(self, filename, contents):
-        with open(filename, "wb") as handle:
+        with open(data_dir + '/' + filename, "wb") as handle:
             handle.write(contents.data)
             return True                                                                                                                                            
 
@@ -35,12 +49,12 @@ def get_my_IP():
     ipaddress = line[0].split(':')[1].split()[0]
     return ipaddress
 
-def get_my_info(conn, myIP):
+def get_my_config(conn, myIP):
     c = conn.cursor()
     c.execute('select port, seq_no from men where ip=?', (myIP,))
-    my_info = c.fetchone()
+    my_config = c.fetchone()
     c.close()
-    return my_info
+    return my_config
 
 def get_next_hops(conn, seq_no):
     c = conn.cursor()
@@ -90,14 +104,12 @@ def store_bot_info(tree, conn):
     c.close()
     
 if __name__=='__main__':
-    # Set global timeout for 
-    socket.setdefaulttimeout(3)
     # Get my ip address
     my_ip = get_my_IP()
     #myIP = '10.0.1.243'
     print('My IP is:', my_ip, end = '; ')
-    # Connect to/create local database
-    db = 'men.db'
+    # We'll use just one db connection
+    # and pass it around, as needed
     conn = sql.connect(db)
     # Get the tree from the men.xml file
     url = 'http://10.0.1.221:82/men.xml'
@@ -109,23 +121,28 @@ if __name__=='__main__':
     else:
         print('Can\'t reach the server. Using an old copy, if it exists!')
     # What's my assigned server port number and seq_no?
-    my_info = get_my_info(conn, my_ip)
-    if my_info==None:
-        print('No botnet info available for my node! Exiting...')
+    my_config = get_my_config(conn, my_ip)
+    if my_config == None:
+        print('No botnet info available from XML server for my node! Exiting...')
         sys.exit(1)
-    my_port, my_seq_no = my_info
+    my_port, my_seq_no = my_config
     # At this point, we have all the info 
     # needed to fire up an XMLRPC server
     print('My port number is', my_port, 'and my sequence number is', my_seq_no)
-
     # We'll only start a server if my_seq_no != 0
     # In that case, we only need to start up an XMLRPC client
     if my_seq_no > 0:
         try:
             print(strftime('%H:%M:%S') + ' Spawning child process for XMLRPC server' + '...', end = '')
-            agent = mp.Process(target=RequestHandler, args=(my_ip, int(my_port),))
-            agent.start()
-            print('success!')
+            server = mp.Process(target=RequestHandler, args=(my_ip, int(my_port),))
+            server.start()
+            time.sleep(1)
+            if server.is_alive():
+                print('success!')
+            else:
+                print('Whoops! The server doesn\'t seem to have started. Exiting...')
+                sys.exit(1)
+                
         except Exception as e:
             print('ERROR: Can\'t start XMLRPC server instance:', e)
 
@@ -148,6 +165,8 @@ if __name__=='__main__':
     while True:
         try:
             time.sleep(30)
+            if not server.is_alive():
+                print('ERROR: My server seems to have left the building. Exiting...')
         except KeyboardInterrupt:
             print('Main program says bye!')
-            sys.exit(0)
+            break
