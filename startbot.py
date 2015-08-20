@@ -202,7 +202,7 @@ if __name__=='__main__':
                 else:
                     print('ERROR: Not able to connect downstream server:', e)
                     print('Exiting...')
-                    sys.exit(1)
+v                    sys.exit(1)
                 continue
             break
         if proxy == None:
@@ -221,15 +221,16 @@ if __name__=='__main__':
         try:
             files = os.listdir(data_dir)
             print('Files in the data directory:', files)
-            lock.acquire()
-            for file in files:
-                if os.path.isfile(file):
-                    with open('./bots2.xml', "rb") as handle:
-                        binary_data = xmlrpc.client.Binary(handle.read())
-                    proxy.server_receive_file(binary_data)
-            for file in files:
-                os.remove(data_dir + '/' + file)
-            lock.release()
+            if client:
+                lock.acquire()
+                for file in files:
+                    if os.path.isfile(data_dir + '/' + file):
+                        with open(data_dir + '/' + file, "rb") as handle:
+                            binary_data = xmlrpc.client.Binary(handle.read())
+                        proxy.server_receive_file(binary_data)
+                for file in files:
+                    os.remove(data_dir + '/' + file)
+                lock.release()
             # Whew! Let's get some rest...
             time.sleep(30)
             # Let's check on the server
