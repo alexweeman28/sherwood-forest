@@ -3,18 +3,21 @@ import sqlite3 as sql
 import os, re, socket, subprocess, sys, time
 import urllib.request
 import multiprocessing as mp
+import xmlrpc.client
 from time import strftime
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.server import SimpleXMLRPCRequestHandler
 
-### Set global configuration parms ###
-# How long to wait for XML server to respond?
-socket.setdefaulttimeout(3)
+##### Set global configuration parms #####
+default_delay = 3
+# How long to wait for servers to respond?
+socket.setdefaulttimeout(default_delay)
 # Where is men.xml data stored locally?
 db = 'men.db'
 # Where are incoming/outgoing files stored?
 data_dir = 'data'
-
+# How many tries to connect to each successive downstream server?
+conn_max_tries = 3
 
 class RequestHandler(SimpleXMLRPCRequestHandler):
     '''A (very) simple XMLRPC server that merely accepts
@@ -131,6 +134,7 @@ if __name__=='__main__':
     print('My port number is', my_port, 'and my sequence number is', my_seq_no)
     # We'll only start a server if my_seq_no != 0
     # In that case, we only need to start up an XMLRPC client
+    server = None
     if my_seq_no > 0:
         try:
             print(strftime('%H:%M:%S') + ' Spawning child process for XMLRPC server' + '...', end = '')
@@ -156,11 +160,48 @@ if __name__=='__main__':
     # If the return value is None, that means
     # we're the last hop, in which case we
     # won't be defining a client
-
+    client = False
     if next_hops != None:
-        print('Fire up a client!')
+        client = True
+        print('Trying to fire up a client!')
+        tries = hop = 0
+        proxy = None
+        while hop < len(next_hops):
+            server_url = 'http://' + next_hops[hop][0] + ':' + next_hops[hop][1] + '/'
+            print('Trying to connect to', server_url)
+            try:
+                # The constructor doesn't attempt to connect,
+                # so we have to ask for something to confirm
+                # we can actually talk to the server.
+                proxy = xmlrpc.client.ServerProxy(server_url)
+                proxy.system.listMethods()
+            except Exception as e:
+                print('ERROR: Unable to connect to downstream server:', e)
+                if(e.errno == 111):
+                    time.sleep(default_delay)
+                tries += 1
+                proxy = None
+                if tries >= conn_max_tries:
+                    hop += 1
+                    tries = 0
+                    print('Warning: Client unable to connect to downstream server...', end = ' ')
+                    if tries == 0 and hop >= len(next_hops):
+                        print('no more hops to try!')
+                    else:
+                        print('trying next hop!')
+                continue
+            break
+        if proxy == None:
+            print('ERROR: Client unable to connect to any downstream server...', end = '')
+            if server != None:
+                print('terminating XMLRPC server process...', end = '')
+                server.terminate()
+            print('exiting.')
+            sys.exit(1)
+        else:
+            print('Connected successfully to', next_hops[hop])
     else:
-        print('We\'re done here!')
+        print('No downstream server exists, so skipping XMLRPC client creation.')
 
     while True:
         try:
