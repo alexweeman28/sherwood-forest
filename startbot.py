@@ -162,12 +162,12 @@ if __name__=='__main__':
     # client to, if any...
     print('My sequence number is', my_seq_no)
     next_hops = get_next_hops(conn, my_seq_no)
-    print('The next hops are', next_hops)
     # If the return value is None, that means
     # we're the last hop, in which case we
     # won't be defining a client.
     client = False
-    if next_hops != None:
+    if len(next_hops) > 0:
+        print('The next hops are', next_hops)
         client = True
         print('Trying to fire up a client!')
         tries = hop = 0
