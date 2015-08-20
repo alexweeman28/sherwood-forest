@@ -27,6 +27,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
         self.server = SimpleXMLRPCServer((ip, port))
         # This method gives us a way to check
         # connectivity for clients
+        self.lock = lock
         self.server.register_introspection_functions()
         self.server.register_function(self.server_receive_file, 'server_receive_file')
         if not os.path.exists(data_dir):
@@ -227,7 +228,7 @@ if __name__=='__main__':
                     if os.path.isfile(data_dir + '/' + file):
                         with open(data_dir + '/' + file, "rb") as handle:
                             binary_data = xmlrpc.client.Binary(handle.read())
-                        proxy.server_receive_file(binary_data)
+                        proxy.server_receive_file(file, binary_data)
                 for file in files:
                     os.remove(data_dir + '/' + file)
                 lock.release()
