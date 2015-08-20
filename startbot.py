@@ -167,19 +167,17 @@ if __name__=='__main__':
         except Exception as e:
             print('ERROR: Can\'t start XMLRPC server instance:', e)
 
-    # Now, who is our next hop? We need this
-    # to define which server to connect our
-    # client to, if any...
+    # Now, who is our next hop? We need this to define which server
+    # to connect our client to, if any...
     print('My sequence number is', my_seq_no)
     next_hops = get_next_hops(conn, my_seq_no)
-    # If the return value is None, that means
-    # we're the last hop, in which case we
-    # won't be defining a client.
+    # If the return value is None, that should mean we're the last
+    # hop, in which case we won't be creating a client.
     client = False
     if len(next_hops) > 0:
-        print('The next hops are', next_hops)
+        #print('The next hops are', next_hops)
         client = True
-        print('Trying to fire up a client!')
+        #print('Trying to fire up a client!')
         tries = hop = 0
         proxy = None
         while hop < len(next_hops):
@@ -227,27 +225,35 @@ if __name__=='__main__':
     # Here's our 'infinite' loop
     while True:
         try:
+            # Whew! Let's get some rest...
+            time.sleep(30)
+            # Okay, now let's check on the server...
+            # If it's not running, we're not doing any
+            # good, so we might as well exit.
+            if not server.is_alive():
+                print('ERROR: My server seems to have left the building. Exiting...')
+                break
+            # Check to see whether any new files have
+            # come our way since the last loop iteration.
             files = os.listdir(data_dir)
             print('Files in the data directory:', files)
+            # For those bots that have clients, we need to
+            # send these files to the downstream server
             if client:
-                lock.acquire()
                 for file in files:
                     if os.path.isfile(data_dir + '/' + file):
+                        lock.acquire()
                         with open(data_dir + '/' + file, "rb") as handle:
                             binary_data = xmlrpc.client.Binary(handle.read())
                         proxy.server_receive_file(file, binary_data)
+                        lock.release()
                 for file in files:
+                    lock.acquire()
                     os.remove(data_dir + '/' + file)
-                lock.release()
-            # Whew! Let's get some rest...
-            time.sleep(30)
-            # Let's check on the server
-            if not server.is_alive():
-                print('ERROR: My server seems to have left the building. Exiting...')
-            
+                    lock.release()
         except KeyboardInterrupt:
             print('Main program says bye!')
             break
         except Exception as e:
-            print('Something bad happened:', e)
+            print('Something bad happened:', e, 'Not my fault!')
             break
