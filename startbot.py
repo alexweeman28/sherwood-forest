@@ -42,12 +42,12 @@ def get_my_info(conn, myIP):
     c.close()
     return my_info
 
-def get_next_hop(conn, seq_no):
+def get_next_hops(conn, seq_no):
     c = conn.cursor()
     c.execute('select max(seq_no) from men')
     last = c.fetchone()
-    c.execute('select ip, port from men where seq_no > ?  and seq_no < ? order by seq_no limit 1', (str(seq_no), last[0], ))
-    next = c.fetchone()
+    c.execute("select ip, port from men where active = 'True' and seq_no > ?  and seq_no <= ? order by seq_no", (str(seq_no), last[0], ))
+    next = c.fetchall()
     c.close()
     return next
 
@@ -95,7 +95,7 @@ if __name__=='__main__':
     # Get my ip address
     my_ip = get_my_IP()
     #myIP = '10.0.1.243'
-    print('My IP is:', my_ip)
+    print('My IP is:', my_ip, end = '; ')
     # Connect to/create local database
     db = 'men.db'
     conn = sql.connect(db)
@@ -133,14 +133,14 @@ if __name__=='__main__':
     # to define which server to connect our
     # client to, if any...
     print('My sequence number is', my_seq_no)
-    next_hop = get_next_hop(conn, my_seq_no)
-    print('The next hop is', next_hop)
+    next_hops = get_next_hops(conn, my_seq_no)
+    print('The next hops are', next_hops)
 
     # If the return value is None, that means
     # we're the last hop, in which case we
     # won't be defining a client
 
-    if next_hop != None:
+    if next_hops != None:
         print('Fire up a client!')
     else:
         print('We\'re done here!')
