@@ -104,7 +104,7 @@ def parseXML(url, file='men.xml'):
     except:
         return None
 
-def forward_files(proxy, hops, files, lock=None):
+def forward_files(proxy, hops, files, lock):
     '''Send newly-arrived files to the closest available
     downstream server.
     '''
@@ -140,7 +140,7 @@ def forward_files(proxy, hops, files, lock=None):
                 lock.release()
     for file in files:
         if lock != None:
-        lock.acquire()
+            lock.acquire()
         os.remove(data_dir + '/' + file)
         if lock != None:
             lock.release()
@@ -195,7 +195,9 @@ if __name__=='__main__':
     # needed to fire up an XMLRPC server
     print(strftime('%H:%M:%S') + ' My port number is', my_port, 'and my sequence number is', my_seq_no)
     # We'll only start a server if my_seq_no > 0
+    # We also only need a lock if we need a server
     server = None
+    lock = None
     if my_seq_no > 0:
         # Create a lock that we'll use for access to the data_dir
         # in sync with our XMLRPC server
