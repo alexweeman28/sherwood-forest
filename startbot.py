@@ -21,8 +21,6 @@ xml_url = 'http://10.0.1.221:82/men.xml'
 db = 'men.db'
 # Where are incoming/outgoing files stored?
 data_dir = 'data'
-# How many tries to connect to each successive downstream server?
-conn_max_tries = 3
 
 class RequestHandler(SimpleXMLRPCRequestHandler):
     '''A (very) simple XMLRPC server that merely accepts
