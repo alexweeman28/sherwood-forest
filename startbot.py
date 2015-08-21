@@ -104,7 +104,7 @@ def parseXML(url, file='men.xml'):
     except:
         return None
 
-def forward_files(proxy, hops, files, lock):
+def forward_files(proxy, hops, files, lock=None):
     '''Send newly-arrived files to the closest available
     downstream server.
     '''
@@ -131,15 +131,19 @@ def forward_files(proxy, hops, files, lock):
     
     for file in files:
         if os.path.isfile(data_dir + '/' + file):
-            lock.acquire()
+            if lock != None:
+                lock.acquire()
             with open(data_dir + '/' + file, "rb") as handle:
                 binary_data = xmlrpc.client.Binary(handle.read())
             proxy.server_receive_file(file, binary_data)
-            lock.release()
+            if lock != None:
+                lock.release()
     for file in files:
+        if lock != None:
         lock.acquire()
         os.remove(data_dir + '/' + file)
-        lock.release()
+        if lock != None:
+            lock.release()
     print(strftime('%H:%M:%S') + ' Successfully forwarded my files to', proxy)
 
 def store_bot_info(tree, conn):
