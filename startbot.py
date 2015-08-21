@@ -223,7 +223,7 @@ if __name__=='__main__':
             try:
                 os.makedirs(data_dir)
             except OSError as e:
-                print(strftime('%H:%M:%S') + ' ERROR: XMLRPC client at source  unable to create data directory:', e)
+                print(strftime('%H:%M:%S') + ' ERROR: XMLRPC client at source unable to create data directory:', e)
                 sys.exit(1)
                                                                                                     
     # Now, who is our next hop? We need this to define which server
