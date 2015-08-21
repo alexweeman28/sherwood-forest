@@ -209,10 +209,21 @@ if __name__=='__main__':
                 
         except Exception as e:
             print(strftime('%H:%M:%S') + ' ERROR: Can\'t start XMLRPC server instance:', e)
-
+    # For all but the source node, the data_dir is created
+    # when the server instance is instantiated. This else
+    # block ensures that the data_dir exists at the source.
+    else:
+        print(strftime('%H:%M:%S') + ' My sequence number is 0, so I\'m NOT creating an XMLRPC server' + '...')
+        if not os.path.exists(data_dir):
+            try:
+                os.makedirs(data_dir)
+            except OSError as e:
+                print(strftime('%H:%M:%S') + ' ERROR: XMLRPC server unable to create data directory:', e)
+                sys.exit(1)
+                                                                                                    
     # Now, who is our next hop? We need this to define which server
     # to connect our client to, if any...
-    print(strftime('%H:%M:%S') + ' My sequence number is', my_seq_no)
+    #print(strftime('%H:%M:%S') + ' My sequence number is', my_seq_no)
     next_hops = get_next_hops(conn, my_seq_no)
     # If the return value is None, that should mean we're the last
     # hop, in which case we won't be creating a client.
@@ -248,7 +259,7 @@ if __name__=='__main__':
             # Okay, now let's check on the server...
             # If it's not running, we're not doing any good, so we might as well exit.
             # Later, maybe add code to restart the server if it's down...
-            if not server.is_alive():
+            if server != None and not server.is_alive():
                 print(strftime('%H:%M:%S') + ' ERROR: My server seems to have left the building. Exiting...')
                 break
             # Check to see whether any new files have come our way since the last
