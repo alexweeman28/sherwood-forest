@@ -142,6 +142,7 @@ def forward_files(proxy, hops, files, lock):
         lock.acquire()
         os.remove(data_dir + '/' + file)
         lock.release()
+    print(strftime('%H:%M:%S') + ' Successfully forwarded my files to', proxy)
 
 def store_bot_info(tree, conn):
     '''Store the data from the XML file in a local SQLite3 database'''
