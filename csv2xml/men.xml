@@ -43,19 +43,31 @@
       <seq_no>30</seq_no>
       <active>False</active>
     </bot>
+<<<<<<< HEAD
     <bot id="8">
+=======
+    <bot id="7">
+>>>>>>> e67ec192f379b0cf8e26e91911562192fce8c8be
       <ipaddress>10.0.1.230</ipaddress>
       <port>8101</port>
       <seq_no>0</seq_no>
       <active>True</active>
     </bot>
+<<<<<<< HEAD
     <bot id="9">
+=======
+    <bot id="8">
+>>>>>>> e67ec192f379b0cf8e26e91911562192fce8c8be
       <ipaddress>10.0.1.243</ipaddress>
       <port>9200</port>
       <seq_no>99</seq_no>
       <active>True</active>
     </bot>
+<<<<<<< HEAD
     <bot id="10">
+=======
+    <bot id="9">
+>>>>>>> e67ec192f379b0cf8e26e91911562192fce8c8be
       <ipaddress>10.0.1.247</ipaddress>
       <port>8157</port>
       <seq_no>50</seq_no>
