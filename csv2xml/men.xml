@@ -38,12 +38,18 @@
       <active>False</active>
     </bot>
     <bot id="7">
+      <ipaddress>10.0.1.230</ipaddress>
+      <port>8101</port>
+      <seq_no>0</seq_no>
+      <active>True</active>
+    </bot>
+    <bot id="8">
       <ipaddress>10.0.1.243</ipaddress>
       <port>9200</port>
       <seq_no>99</seq_no>
       <active>True</active>
     </bot>
-    <bot id="8">
+    <bot id="9">
       <ipaddress>10.0.1.247</ipaddress>
       <port>8157</port>
       <seq_no>50</seq_no>

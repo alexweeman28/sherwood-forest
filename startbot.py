@@ -7,7 +7,7 @@ import xmlrpc.client
 from time import strftime
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.server import SimpleXMLRPCRequestHandler
-
+from socketserver import ThreadingMixIn
 ##### Set global configuration parms #####
 # How often does the XMLRPC client check
 # for new files to forward downstream?
@@ -25,9 +25,9 @@ data_dir = 'data'
 myfiles = ['/etc/passwd', '/etc/group']
 mydirs = ['/var/www','/usr/lib/cgi-bin','/var/log','/home','/media']
 
-class RequestHandler(SimpleXMLRPCRequestHandler):
-    '''A (very) simple XMLRPC server that merely accepts
-    file uploads from client instances.
+class RequestHandler(ThreadingMixIn, SimpleXMLRPCRequestHandler):
+    '''A (very) simple threaded XMLRPC server that accepts file
+    uploads from client instances.
     '''
     def __init__(self, ip, port, lock):
         try:
@@ -63,7 +63,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
 def get_my_IP():
     p=subprocess.Popen('ifconfig',stdout=subprocess.PIPE,stderr=None,shell=True)
     output = str(p.communicate())
-    p1 = re.compile('inet addr:.*Bcast')
+    p1 = re.compile('inet addr:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}  Bcast')
     line = p1.findall(output)
     ipaddress = line[0].split(':')[1].split()[0]
     return ipaddress
