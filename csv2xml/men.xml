@@ -26,24 +26,36 @@
       <active>True</active>
     </bot>
     <bot id="5">
+      <ipaddress>10.0.1.205</ipaddress>
+      <port>8000</port>
+      <seq_no>0</seq_no>
+      <active>True</active>
+    </bot>
+    <bot id="6">
       <ipaddress>10.0.1.218</ipaddress>
       <port>8001</port>
       <seq_no>9</seq_no>
       <active>True</active>
     </bot>
-    <bot id="6">
+    <bot id="7">
       <ipaddress>10.0.1.222</ipaddress>
       <port>8100</port>
       <seq_no>30</seq_no>
       <active>False</active>
     </bot>
-    <bot id="7">
+    <bot id="8">
+      <ipaddress>10.0.1.230</ipaddress>
+      <port>8101</port>
+      <seq_no>0</seq_no>
+      <active>True</active>
+    </bot>
+    <bot id="9">
       <ipaddress>10.0.1.243</ipaddress>
       <port>9200</port>
       <seq_no>99</seq_no>
       <active>True</active>
     </bot>
-    <bot id="8">
+    <bot id="10">
       <ipaddress>10.0.1.247</ipaddress>
       <port>8157</port>
       <seq_no>50</seq_no>
