@@ -8,7 +8,12 @@ from time import strftime
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.server import SimpleXMLRPCRequestHandler
 from socketserver import ThreadingMixIn
+
 ##### Set global configuration parms #####
+# Set some default file locations:
+work_dir = '/home/jim/Desktop/sherwood-forest/'
+log_file = 'startbot.log'
+log_id = 'startbot.py'
 # How often does the XMLRPC client check
 # for new files to forward downstream?
 client_delay = 30
@@ -17,8 +22,9 @@ default_delay = 3
 socket.setdefaulttimeout(default_delay)
 # Where is the men.xml file available?
 xml_url = 'http://10.0.1.221:82/men.xml'
+xml_file = work_dir + 'men.xml'
 # Where is men.xml data stored locally?
-db = 'men.db'
+db = work_dir + 'men.db'
 # Where are incoming/outgoing files stored?
 data_dir = 'data'
 # What files are we after on node 0?
@@ -38,8 +44,8 @@ class RequestHandler(ThreadingMixIn, SimpleXMLRPCRequestHandler):
         except Exception as e:
             logger.critical('The XMLRPC server won\'t start: %s', e)
             sys.exit(1)
-        # A synchronization variable so we're not fighting with clients over files
-        # in the data directory
+        # A synchronization variable so we're not fighting with clients
+        # over files in the data directory
         self.lock = lock
         # This method gives us a way to check connectivity for clients
         self.server.register_introspection_functions()
@@ -141,7 +147,7 @@ def store_file_info(conn, filelst):
     conn.commit()
     c.close()
     
-def parseXML(url, file='men.xml'):
+def parseXML(url=xml_url, file=xml_file):
     '''Go and get the XML file with the bot data'''
     try:
         # Grab the file and store it locally
@@ -156,8 +162,9 @@ def forward_files(proxy, hops, files, lock):
     '''Send newly-arrived files to the closest available
     downstream server.
     '''
-    # First, try a 'comm-check' with our proxy. If we can't reach that server, we'll continue the comm-
-    # checks down the sequence until either a server answers or we run out of servers to try.
+    # First, try a 'comm-check' with our proxy. If we can't reach that server, 
+    # we'll continue the comm-checks down the sequence until either a server
+    # answers or we run out of servers to try.
     hop = 0
     while hop < len(hops):
         logger.info('Trying to forward my files to %s', proxy)
@@ -216,11 +223,14 @@ if __name__=='__main__':
     '''
     ### Set up logging
     # Create logger
-    logger = logging.getLogger('startbot.py')
+    logger = logging.getLogger(log_id)
     logger.setLevel(logging.INFO)
-    # Create logging console handler and set level to info
+    ### Create logging console handler and set level to info
+    # Choose your weapon:
+    # 1) To stdout with StreamHandler()
+    # 2) To file with FileHandler()
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    #ch = logging.FileHandler(work_dir + log_file)
     # Create logging formatter
     formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s', '%b %e %H:%M:%S')
     # Add formatter to logging console handler
@@ -233,7 +243,7 @@ if __name__=='__main__':
     # We'll use just one db connection and pass it around, as needed
     conn = sql.connect(db)
     # Get the tree from the men.xml file
-    tree = parseXML(xml_url)
+    tree = parseXML(xml_url, xml_file)
     if len(tree):
         # Create/open and then populate the men database
         create_men_db(conn)
