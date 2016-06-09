@@ -8,7 +8,7 @@ The scripts and other files in this directory support the conversion of CSV file
 
 **men.csv:** This file contains information on the hosts that make up the data exfiltration network. The first line of this file should be a header, containing the column names: *ipaddress,port,seq_no,active*, representing each host's ip address, port number, sequence number and a True/False value indicating whether or not the node should be considered active. The ```csv2xml.py``` script imports this file and converts it to XML format. 
 
-Regarding sequence numbers, the sequence number 0 is reserved for the very first host in the data exfiltration chain, and the number 99 is reserved for the very last bot in the chain. Intermediate hosts may be assigned any value in between. The relative sequence numbers determine the order in which files are passwed from the source node (sequence number 0) to the sink node (sequence number 99).
+Regarding sequence numbers, the sequence number 0 is reserved for the very first host in the data exfiltration chain, and the number 99 is reserved for the very last bot in the chain. Intermediate hosts may be assigned any value in between. The relative sequence numbers determine the order in which files are passed from the source node (sequence number 0) to the sink node (sequence number 99).
 
 **men.xml:** A sample XML file written by the ```csv2xml.py``` script after converting the data from ```men.csv``` to XML format.
 
