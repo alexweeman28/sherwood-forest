@@ -20,4 +20,4 @@ The ```csv2xml.py``` script uses only Python 3 standard libraries. No additional
 
 ## Configuration and Use
 
-Prior to running the ```csv2xml.py``` script, a CSV file named ```men.csv``` and  formatted as described above should be placed in the current directory. After the script is run, the output file ```men.xml``` and the XSL stylesheet ```men.xsl``` should be placed on a Web server visible to all data exfiltration hosts.
+Prior to running the ```csv2xml.py``` script, a CSV file named ```men.csv```, formatted as described above, should be placed in the current directory. After the script is run, the output file ```men.xml``` and the XSL stylesheet ```men.xsl``` should be placed on a Web server visible to all data exfiltration hosts.
