@@ -1,4 +1,4 @@
-# sherwood-forest/csv2xml
+1;2c# sherwood-forest/csv2xml
 
 The script and other files in this directory support the conversion of CSV files containing information on the sherwood-forest data exfiltration-bot network to machine- and human-readable XML files. It is envisioned that data on the bots will be maintained in a spreadsheet file, which will be exported to CSV format for conversion to XML. A sample CSV input file ```men.csv`` and XML output file ```men.xml``` produced by the included ```csv2xml.py````script are included for reference.
 
@@ -20,3 +20,4 @@ The ```csv2xml.py``` script uses only Python 3 standard libraries. No additional
 
 ## Configuration and Use
 
+Prior to running the ```csv2xml.py``` script, a CSV file named ```men.csv``` and  formatted as described above should be placed in the current directory. After the script is run, the output file ```men.xml``` and the XSL stylesheet ```men.xsl``` should be placed on a Web server visible to all data exfiltration hosts.

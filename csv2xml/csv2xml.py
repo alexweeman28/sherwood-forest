@@ -51,7 +51,7 @@ def main(args):
     f = csv.reader(open(filename, 'r'))
   except IOError:
     print('ERROR: Input file men.csv not found in current working directory')
-    sys.exit()
+    sys.exit(1)
     
   doc = Document()
   # Use the file name as the root node name
