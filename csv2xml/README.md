@@ -14,3 +14,9 @@ Regarding sequence numbers, the sequence number 0 is reserved for the very first
 
 **men.xsl:** An XML stylesheet to render a human-readable version of ```men.xml```when viewed in a Web browser. This stylesheet is referenced in the XML file and should be available in the same directory on the Web server. 
 
+## Installation
+
+The ```csv2xml.py``` script uses only Python 3 standard libraries. No additional installation steps are required.
+
+## Configuration and Use
+
