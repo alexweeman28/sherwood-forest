@@ -1,6 +1,6 @@
-1;2c# sherwood-forest/csv2xml
+# sherwood-forest/csv2xml
 
-The script and other files in this directory support the conversion of CSV files containing information on the sherwood-forest data exfiltration-bot network to machine- and human-readable XML files. It is envisioned that data on the bots will be maintained in a spreadsheet file, which will be exported to CSV format for conversion to XML. A sample CSV input file ```men.csv`` and XML output file ```men.xml``` produced by the included ```csv2xml.py````script are included for reference.
+The script and other files in this directory support the conversion of CSV files containing information on the sherwood-forest data exfiltration-bot network to machine- and human-readable XML files. It is envisioned that data on the bots will be maintained in a spreadsheet file, which will be exported to CSV format for conversion to XML. A sample CSV input file ```men.csv``` and XML output file ```men.xml``` produced by the included ```csv2xml.py``` script are included for reference.
 
 ## Files
 
