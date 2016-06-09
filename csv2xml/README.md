@@ -1,6 +1,6 @@
 # sherwood-forest/csv2xml
 
-The scripts and other files in this directory support the conversion of CSV files containing information on the sherwood-forest data exfiltration-bot network to machine- and human-readable XML files. It is envisioned that data on the bots will be maintained in a spreadsheet file, which will be exported to CSV format for conversion to XML.
+The script and other files in this directory support the conversion of CSV files containing information on the sherwood-forest data exfiltration-bot network to machine- and human-readable XML files. It is envisioned that data on the bots will be maintained in a spreadsheet file, which will be exported to CSV format for conversion to XML. A sample CSV input file ```men.csv`` and XML output file ```men.xml``` produced by the included ```csv2xml.py````script are included for reference.
 
 ## Files
 
@@ -14,12 +14,3 @@ Regarding sequence numbers, the sequence number 0 is reserved for the very first
 
 **men.xsl:** An XML stylesheet to render a human-readable version of ```men.xml```when viewed in a Web browser. This stylesheet is referenced in the XML file and should be available in the same directory on the Web server. 
 
-
-
-
-
-Regarding sequence numbers, the sequence number 0 is reserved for the very first bot in the chain, and the number 99 is reserved for the very last bot in the chain. 
-
-An XML stylesheet, **men.xsl**, is also included to produce a human-readable version of the XML file when viewed in a Web browser. This stylesheet is referenced in the XML file (men.xml) produced by csv2xml and should be available in the current working directory.
-
-A sample CSV input file **men.csv** and XML output file **men.xml** produced by the script are also included for reference.
