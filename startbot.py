@@ -11,7 +11,7 @@ from socketserver import ThreadingMixIn
 
 ##### Set global configuration parms #####
 # Set some default file locations:
-work_dir = '/home/jim/Desktop/sherwood-forest/'
+work_dir = '/home/jim/sherwood-forest/'
 log_file = 'startbot.log'
 log_id = 'startbot.py'
 # How often does the XMLRPC client check
@@ -80,11 +80,14 @@ def get_my_IP():
     return ipaddress
 
 def get_my_config(conn, myIP):
-    c = conn.cursor()
-    c.execute('select port, seq_no from men where ip=?', (myIP,))
-    my_config = c.fetchone()
-    c.close()
-    return my_config
+    try:
+        c = conn.cursor()
+        c.execute('select port, seq_no from men where ip=?', (myIP,))
+        my_config = c.fetchone()
+        c.close()
+        return my_config
+    except:
+        return None
 
 def get_next_hops(conn, seq_no):
     c = conn.cursor()
@@ -244,7 +247,7 @@ if __name__=='__main__':
     conn = sql.connect(db)
     # Get the tree from the men.xml file
     tree = parseXML(xml_url, xml_file)
-    if len(tree):
+    if tree != None:
         # Create/open and then populate the men database
         create_men_db(conn)
         store_bot_info(tree, conn)
