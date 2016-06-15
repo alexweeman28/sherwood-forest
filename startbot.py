@@ -135,7 +135,7 @@ def steal_a_file(conn, my_ip):
               
 def store_file_info(conn, filelst):
     '''Store the data from the file list in a local SQLite3 database'''
-    # Loop through the filelst and insert the data for each
+    # Loop through the file list and insert the data for each
     # in the local database pointed to by the conn object
     c = conn.cursor()
     for file in filelst:
