@@ -76,12 +76,15 @@ class StartBot(object):
         return ipaddress
 
     def get_my_config(self, conn, myIP):
-        c = conn.cursor()
-        c.execute('select port, seq_no from men where ip=?', (myIP,))
-        my_config = c.fetchone()
-        c.close()
-        return my_config
-
+        try:
+            c = conn.cursor()
+            c.execute('select port, seq_no from men where ip=?', (myIP,))
+            my_config = c.fetchone()
+            c.close()
+            return my_config
+        except:
+            return None
+        
     def get_next_hops(self, conn, seq_no):
         c = conn.cursor()
         c.execute('select max(seq_no) from men')
@@ -238,7 +241,7 @@ class StartBot(object):
         conn = sql.connect(StartBot.db)
         # Get the tree from the men.xml file
         tree = self.parseXML(StartBot.xml_url)
-        if len(tree):
+        if tree != None:
             # Create/open and then populate the men database
             self.create_men_db(conn)
             self.store_bot_info(tree, conn)
