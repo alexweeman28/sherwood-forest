@@ -25,7 +25,12 @@ Configuration begins with the creation of a CSV (comma-separated values) file na
 
 Once the data in ```men.csv``` has been converted to XML format and stored in ```men.xml```, this file along with ```men.xslt``` should be placed on a Web server that is accessible via the network to all data exfiltration hosts.
 
-When the ```startbot.py``` script is run, the data exfiltration hosts identified in ```men.xml``` will essentially form a bucket brigade, the purpose of which will be to steal files from a source node (the node specified in ```men.xml``` with sequence number 0, and to forward these files through a series of hosts, based on their sequence numbers, until the host with sequence number 99 is reached. This "sink" node serves as the final destination for stolen files.
+When the ```startbot.py``` script is run, the data exfiltration hosts identified in ```men.xml``` will essentially form a bucket brigade, the purpose of which will be to steal files from a source node (the node specified in ```men.xml``` with sequence number 0, and forward them through the series of participating hosts, based on their sequence numbers, until the host with sequence number 99 is reached. This "sink" node serves as the final destination for stolen files.
 
 Configuration settings for each data exfiltration host should be specified in the ```settings.ini``` file. See the sample file included in this repository for the default settings.
 
+To initiate data exfiltration, simply copy the files in this repository to each participating host identified in the ```men.xml``` file, adjust the configuration in ```settings.ini``` as desired, and start the script as shown below:
+```
+python3 startbot.py
+```
+The script can be halted by pressing Ctrl-c at each participating host.
