@@ -47,7 +47,7 @@ class StartBot(object):
         '''A (very) simple threaded XMLRPC server that accepts file
         uploads from client instances.
         '''
-        def __init__(self, ip, port, lock, logger):
+        def __init__(self, ip, port, lock, logger, data_dir):
             self.logger = logger
             try:
                 self.server = SimpleXMLRPCServer((ip, port), logRequests=False)
@@ -60,9 +60,9 @@ class StartBot(object):
             # This method gives us a way to check connectivity for clients
             self.server.register_introspection_functions()
             self.server.register_function(self.server_receive_file, 'server_receive_file')
-            if not os.path.exists(self.data_dir):
+            if not os.path.exists(data_dir):
                 try:
-                    os.makedirs(self.data_dir)
+                    os.makedirs(data_dir)
                 except OSError as e:
                     self.logger.critical('ERROR: XMLRPC server unable to create data directory: %s', e)
                     sys.exit(1)
@@ -75,7 +75,7 @@ class StartBot(object):
         def server_receive_file(self, filename, contents):
             self.logger.info('XMLRPC server received file from upstream client %s', filename.split('_')[0].replace('-', '.'))
             self.lock.acquire()
-            with open(self.data_dir + '/' + filename, "wb") as handle:
+            with open(data_dir + '/' + filename, "wb") as handle:
                 handle.write(contents.data)
             self.lock.release()
             return True                                                                                                                                            
@@ -282,7 +282,7 @@ class StartBot(object):
             lock = mp.Lock()
             try:
                 logger.info('Spawning child process for XMLRPC server')
-                server = mp.Process(target=self.RequestHandler, args=(my_ip, int(my_port), lock, logger))
+                server = mp.Process(target=self.RequestHandler, args=(my_ip, int(my_port), lock, logger, self.data_dir))
                 server.start()
                 time.sleep(1)
                 if server.is_alive():
