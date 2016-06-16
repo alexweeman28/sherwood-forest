@@ -14,7 +14,7 @@ Regarding sequence numbers, the sequence number 0 is reserved for the very first
 
 **men.xml:** A sample XML file written by the ```csv2xml.py``` script after converting the data from ```men.csv``` to XML format.
 
-**men.xsl:** An XML stylesheet to render a human-readable version of ```men.xml```when viewed in a Web browser. This stylesheet is referenced in the XML file and should be available in the same directory on the Web server. 
+**men.xsl:** An XML stylesheet to render a human-readable version of ```men.xml```when viewed in a Web browser. This stylesheet is referenced in the XML file and should be made available in the same directory on the Web server. 
 
 ## Installation
 
