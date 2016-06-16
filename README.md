@@ -21,7 +21,7 @@ sudo apt-get install sqlite3
 ```
 
 ## Configuration and Use
-Configuration begins with the creation of a CSV (comma-separated values) file named ```men.csv``` containing a list of the hosts that make up the data exfiltration network. The entries in this file should include, for each host, the IP address, port number of an XMLRPC server, sequence number in the data exfil network, and a Boolean value indicating whether or not the host is considered active. A sample ```men.csv``` file can be found in the ```csv2xml/``` directory, along with instructions for converting its data to XML format. See ```csv2xml/README.md``` for details.
+Configuration begins with the creation of a CSV (comma-separated values) file named ```men.csv``` containing a list of the hosts that make up the data exfiltration network. The entries in this file should include for each host the IP address, port number of an XMLRPC server, sequence number in the data exfil network, and a Boolean value indicating whether or not the host is considered active. A sample ```men.csv``` file can be found in the ```csv2xml/``` directory, along with instructions for converting its data to XML format. See ```csv2xml/README.md``` for details.
 
 Once the data in ```men.csv``` has been converted to XML format and stored in ```men.xml```, this file along with ```men.xslt``` should be placed on a Web server that is accessible via the network to all data exfiltration hosts.
 
