@@ -4,6 +4,8 @@ The script and other files in this directory support the conversion of CSV files
 
 ## Files
 
+**README.md:** This file.
+
 **csv2xml.py:** This script imports a CSV file named ```men.csv``` from the current working directory and converts its contents to XML format, adding an one-up (auto-increment) integer id attribute, and writing a new file named ```men.xml``` to the current working directory. 
 
 **men.csv:** This file contains information on the hosts that make up the data exfiltration network. The first line of this file should be a header, containing the column names: *ipaddress,port,seq_no,active*, representing each host's ip address, port number, sequence number and a True/False value indicating whether or not the node should be considered active. The ```csv2xml.py``` script imports this file and converts it to XML format. 
