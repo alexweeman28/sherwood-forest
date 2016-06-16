@@ -4,7 +4,7 @@ Python scripts and other files to support data exfiltration simulations in BetaP
 
 ## Files
 
-**csv2xml:** This directory contains files that support the creation of human- and machine-readable XML files containing information on the software bots. See ```csv2xml/README.md``` for details.
+**csv2xml/:** This directory contains files that support the creation of human- and machine-readable XML files containing information on the software bots. See ```csv2xml/README.md``` for details.
 
 **README.md:** This file.
 
@@ -21,3 +21,11 @@ sudo apt-get install sqlite3
 ```
 
 ## Configuration and Use
+Configuration begins with the creation of a CSV (comma-separated values) file named ```men.csv``` containing a list of the hosts that make up the data exfiltration network. The entries in this file should include, for each host, the IP address, port number of an XMLRPC server, sequence number in the data exfil network, and a Boolean value indicating whether or not the host is considered active. A sample ```men.csv``` file can be found in the ```csv2xml/``` directory, along with instructions for converting its data to XML format. See ```csv2xml/README.md``` for details.
+
+Once the data in ```men.csv``` has been converted to XML format and stored in ```men.xml```, this file along with ```men.xslt``` should be placed on a Web server that is accessible via the network to all data exfiltration hosts.
+
+When the ```startbot.py``` script is run, the data exfiltration hosts identified in ```men.xml``` will essentially form a bucket brigade, the purpose of which will be to steal files from a source node (the node specified in ```men.xml``` with sequence number 0, and to forward these files through a series of hosts, based on their sequence numbers, until the host with sequence number 99 is reached. This "sink" node serves as the final destination for stolen files.
+
+Configuration settings for each data exfiltration host should be specified in the ```settings.ini``` file. See the sample file included in this repository for the default settings.
+
