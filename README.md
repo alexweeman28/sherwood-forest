@@ -9,7 +9,7 @@ Python scripts and other files to support data exfiltration simulations in BetaP
 **csv2xml:** This directory contains files that support the creation of human- and machine-readable XML files containing information on the software bots. See ```csv2xml/README.md``` for details.
 
 ## Installation
-The ```startbot.py``` script uses only Python 3 standard libraries. No additional installation steps are required. It should be noted that this script uses the sqlite3 module in the Python Standard Library to create and use an SQLite3 database. It may therefore be useful to install Ubuntu's sqlite3 package to provide a command line interface to the database:
+The ```startbot.py``` script uses only Python 3 standard libraries. No additional installation steps are required. It should be noted, however, that this script uses the sqlite3 module in the Python Standard Library to create, populate and query an SQLite3 database. It may therefore be useful to install Ubuntu's sqlite3 package to provide a command line interface to the database:
 ```
 sudo apt-get install sqlite3
 ```
